@@ -1,6 +1,7 @@
-const fetch = require("node-fetch");
-const fs = require("fs");
-const { stringify } = require("querystring");
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+import fetch from "node-fetch";
+import * as fs from "fs";
 const { Parser } = require("json2csv");
 const fields = [
   "adult",
@@ -135,11 +136,15 @@ const FetchAndWriteByGenreId = async (id, name) => {
 };
 
 async function FetchAndWriteAllGenre(GenreList) {
-  await Promise.all(
-    GenreList.map(async (genre) => {
-      const contents = await FetchAndWriteByGenreId(genre.id, genre.name);
-    })
-  );
+  // await Promise.all(
+  //   GenreList.map(async (genre) => {
+  //     const contents = await FetchAndWriteByGenreId(genre.id, genre.name);
+  //   })
+  // );
+  for (let i = 0; i < GenreList.length; i++) {
+    await FetchAndWriteByGenreId(GenreList[i].id, GenreList[i].name);
+    continue;
+  }
 }
 
 FetchAndWriteAllGenre(GenreList);
