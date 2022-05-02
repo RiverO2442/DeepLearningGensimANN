@@ -11,6 +11,7 @@ const fields = [
   "genres",
   "homepage",
   "id",
+  "genre",
   "imdb_id",
   "original_language",
   "original_title",
@@ -32,14 +33,14 @@ const fields = [
 ];
 const GenreList = [
   { id: 12, name: "Adventure" },
-  { id: 16, name: "Animation" },
+  //{ id: 16, name: "Animation" },
   { id: 35, name: "Comedy" },
   { id: 80, name: "Crime" },
-  { id: 99, name: "Documentary" },
-  { id: 18, name: "Drama" },
-  { id: 10751, name: "Family" },
+  //{ id: 99, name: "Documentary" },
+  //{ id: 18, name: "Drama" },
+  //{ id: 10751, name: "Family" },
   { id: 14, name: "Fantasy" },
-  { id: 36, name: "History" },
+  //{ id: 36, name: "History" },
   { id: 27, name: "Horror" },
 ];
 const opts = { fields };
@@ -58,11 +59,11 @@ const FetchAndWriteByGenreId = async (id, name) => {
   //console.log(jsonData);
   var numOfPages = 1;
   var idList = [];
-  var numOfIdPerGenre = 100;
+  var numOfIdPerGenre = 1000;
   var numOfWordNeeded = 100;
   //Get a list of movie id that have more than a set number of words in its overview
 
-  while (idList.length < numOfIdPerGenre) {
+  while (idList.length < numOfIdPerGenre && numOfPages <= 500) {
     console.clear();
     console.log("Working On " + name + "....");
     console.log(
@@ -74,50 +75,60 @@ const FetchAndWriteByGenreId = async (id, name) => {
         numOfIdPerGenre +
         " ID"
     );
-    await fetch(
-      `https://api.themoviedb.org/3/discover/movie?api_key=ce69864d6bf2d8c310737e66f4e7a4f3&with_genres=${id}&page=${numOfPages}`
-    )
-      .then((movies) => movies.json())
-      .then(async (movies) => {
-        await movies.results.forEach((movie) => {
-          if (
-            JSON.stringify(movie["overview"])
-              .split(" ")
-              .filter((word) => word !== "").length >= numOfWordNeeded
-          ) {
-            if (idList.length < numOfIdPerGenre) {
-              idList.push(movie["id"]);
+    try {
+      await fetch(
+        `https://api.themoviedb.org/3/discover/movie?api_key=ce69864d6bf2d8c310737e66f4e7a4f3&with_genres=${id}&page=${numOfPages}`
+      )
+        .then((movies) => movies.json())
+        .then(async (movies) => {
+          await movies.results.forEach((movie) => {
+            if (
+              JSON.stringify(movie["overview"])
+                .split(" ")
+                .filter((word) => word !== "").length >= numOfWordNeeded
+            ) {
+              if (idList.length < numOfIdPerGenre) {
+                idList.push(movie["id"]);
+              }
             }
-          }
+          });
         });
-      });
+    } catch (err) {
+      console.error(err);
+    }
     numOfPages++;
   }
   for (let i = 0; i < idList.length; i++) {
-    await fetch(
-      `https://api.themoviedb.org/3/movie/${idList[i]}?api_key=ce69864d6bf2d8c310737e66f4e7a4f3`
-    )
-      .then((data) => data.json())
-      .then(async (data) => {
-        if (data) {
-          data.genres = name;
-          jsonData = MergeJson(jsonData, data, i);
-        }
-        console.clear();
-        console.log("Working On " + name + "....");
-        console.log(
-          "Loading Data... " +
-            (((i + 1) / idList.length) * 100).toFixed(1) +
-            "%"
-        );
-      });
+    try {
+      await fetch(
+        `https://api.themoviedb.org/3/movie/${idList[i]}?api_key=ce69864d6bf2d8c310737e66f4e7a4f3`
+      )
+        .then((data) => data.json())
+        .then(async (data) => {
+          if (data) {
+            //data.genres = name;
+            data["genre"] = name;
+            //console.log(data);
+            jsonData = MergeJson(jsonData, data, i);
+          }
+          console.clear();
+          console.log("Working On " + name + "....");
+          console.log(
+            "Loading Data... " +
+              (((i + 1) / idList.length) * 100).toFixed(1) +
+              "%"
+          );
+        });
+    } catch (err) {
+      console.error(err);
+    }
   }
-  console.log(idList);
-
+  //console.log(idList);
   //==============TO CSV
   console.clear();
   console.log("Working On " + name + "....");
   console.log("Writing To CSV FILE");
+  console.log(JSON.stringify(jsonData));
   try {
     const parser = new Parser(opts);
     const csv = parser.parse(jsonData);
